@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f7f8fc">
+  <meta name="description" content="수학 문제의 답과 풀이 과정을 차근차근 확인해 보세요.">
+  <title>풀이 — 수학을 이해하는 시간</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Gowun+Dodum&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="풀이 홈">
+        <span class="brand-mark" aria-hidden="true"><span>∑</span></span>
+        <span class="brand-name">풀이<span class="brand-dot">.</span></span>
+      </a>
+      <div class="top-note"><span class="status-dot"></span> 천천히, 이해될 때까지</div>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="page-title">
+        <div class="eyebrow"><span class="eyebrow-icon">✳</span> YOUR FRIENDLY MATH GUIDE</div>
+        <h1 id="page-title">답만 보지 말고,<br><span>풀이까지 이해해요.</span></h1>
+        <p class="hero-copy">수학 문제를 입력하면 정답과 함께<br class="mobile-break"> 차근차근 풀어드릴게요.</p>
+      </section>
+
+      <section class="workspace" aria-label="수학 문제 풀이">
+        <div class="solver-card">
+          <div class="card-heading">
+            <div>
+              <div class="section-kicker">문제 입력</div>
+              <h2>어떤 문제가 궁금한가요?</h2>
+            </div>
+            <span class="keyboard-hint"><kbd>Enter</kbd> 로 풀기</span>
+          </div>
+
+          <form id="solver-form" novalidate>
+            <label class="sr-only" for="problem-input">수학 문제</label>
+            <div class="input-wrap">
+              <span class="input-symbol" aria-hidden="true">ƒx</span>
+              <input id="problem-input" name="problem" type="text" autocomplete="off" spellcheck="false" placeholder="예: 2x + 5 = 17" aria-describedby="input-help">
+              <button class="clear-input" id="clear-btn" type="button" aria-label="입력 지우기" title="지우기">×</button>
+            </div>
+            <div class="input-footer">
+              <span id="input-help">계산식 또는 x가 포함된 일차·이차방정식을 입력해 보세요.</span>
+              <button class="solve-button" type="submit"><span>풀이 보기</span><span aria-hidden="true">↗</span></button>
+            </div>
+          </form>
+
+          <div class="examples">
+            <span class="examples-label">예시로 시작</span>
+            <button class="example-chip" type="button" data-problem="2x + 5 = 17"><span class="chip-icon">x</span> 일차방정식</button>
+            <button class="example-chip" type="button" data-problem="x^2 - 5x + 6 = 0"><span class="chip-icon">x²</span> 이차방정식</button>
+            <button class="example-chip" type="button" data-problem="3 × (4 + 2)"><span class="chip-icon">÷</span> 계산식</button>
+          </div>
+          <div class="error-message" id="error-message" role="alert" hidden></div>
+        </div>
+
+        <section class="result-card" id="result-card" aria-live="polite" aria-label="풀이 결과">
+          <div class="result-empty" id="empty-state">
+            <div class="empty-illustration" aria-hidden="true">
+              <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+              <div class="orbit-center">√<span>?</span></div>
+              <span class="float-symbol symbol-plus">+</span><span class="float-symbol symbol-equals">=</span><span class="float-symbol symbol-x">x</span>
+            </div>
+            <h2>풀이가 여기에 보여요</h2>
+            <p>위에 문제를 입력하거나 예시를 골라보세요.<br>답을 찾는 과정도 함께 알려드릴게요.</p>
+            <div class="empty-tags"><span>계산식</span><span>일차방정식</span><span>이차방정식</span></div>
+          </div>
+          <div class="result-content" id="result-content" hidden>
+            <div class="result-topline">
+              <div class="section-kicker">STEP-BY-STEP SOLUTION</div>
+              <button class="copy-button" id="copy-btn" type="button" aria-label="풀이 복사"><span aria-hidden="true">▢</span> 복사</button>
+            </div>
+            <div class="solved-problem" id="solved-problem"></div>
+            <div class="answer-box">
+              <span class="answer-label"><span class="answer-check">✓</span> 정답</span>
+              <div class="answer-value" id="answer-value"></div>
+            </div>
+            <div class="steps-heading"><span>풀이 과정</span><span class="steps-line"></span></div>
+            <ol class="steps-list" id="steps-list"></ol>
+            <div class="result-footnote"><span>✦</span> 이해가 안 되는 단계는 공책에 직접 써보면 더 쉬워져요.</div>
+          </div>
+        </section>
+      </section>
+      <footer class="page-footer"><span>작은 한 걸음이 큰 이해가 돼요.</span><span>MADE FOR CURIOUS MINDS <b>✳</b></span></footer>
+    </main>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
