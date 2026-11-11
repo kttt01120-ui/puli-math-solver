@@ -18,7 +18,10 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   function tokenize(source) {
-    const text = source.replace(/[×·]/g, '*').replace(/[÷]/g, '/').replace(/[−–]/g, '-').replace(/,/g, '');
+    const text = source
+      .replace(/[×·]/g, '*').replace(/[÷]/g, '/').replace(/[−–]/g, '-')
+      .replace(/π/g, 'pi').replace(/²/g, '^2').replace(/³/g, '^3').replace(/⁴/g, '^4')
+      .replace(/√\s*(\([^()]*\)|(?:\d+(?:\.\d*)?|\.\d+))/g, 'sqrt($1)');
     const raw = [];
     let index = 0;
     while (index < text.length) {
@@ -32,8 +35,14 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       const char = text[index].toLowerCase();
       if (char === 'x') raw.push({ type: 'variable', value: 'x' });
+      else if (/[a-z]/i.test(char)) {
+        const identifier = rest.match(/^[a-z]+/i)[0].toLowerCase();
+        raw.push({ type: 'identifier', value: identifier });
+        index += identifier.length;
+        continue;
+      }
       else if ('+-*/^()'.includes(char)) raw.push({ type: char, value: char });
-      else throw new Error(`“${text[index]}” 기호는 아직 읽을 수 없어요. 숫자, x, +, −, ×, ÷, ^, 괄호를 사용해 주세요.`);
+      else throw new Error(`“${text[index]}” 기호는 아직 읽을 수 없어요. 숫자, x, 연산 기호, 괄호, sqrt·sin·cos·tan·log·ln을 사용할 수 있어요.`);
       index += 1;
     }
     if (!raw.length) throw new Error('먼저 풀고 싶은 문제를 입력해 주세요.');
@@ -43,8 +52,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const previous = raw[i - 1];
       const current = raw[i];
       const endsValue = previous && ['number', 'variable', ')'].includes(previous.type);
-      const startsValue = ['number', 'variable', '('].includes(current.type);
-      if (endsValue && startsValue) tokens.push({ type: '*', value: '*' });
+      const startsValue = ['number', 'variable', 'identifier', '('].includes(current.type);
+      const functionBeforeParenthesis = previous?.type === 'identifier' && current.type === '(';
+      const constantBefore = previous?.type === 'identifier' && ['pi', 'e'].includes(previous.value);
+      if ((endsValue || constantBefore) && startsValue && !functionBeforeParenthesis) tokens.push({ type: '*', value: '*' });
       tokens.push(current);
     }
     return tokens;
@@ -89,6 +100,17 @@ document.addEventListener('DOMContentLoaded', () => {
       const number = take('number');
       if (number) return { type: 'number', value: number.value };
       if (take('variable')) return { type: 'variable' };
+      const identifier = take('identifier');
+      if (identifier) {
+        if (identifier.value === 'pi') return { type: 'number', value: Math.PI };
+        if (identifier.value === 'e') return { type: 'number', value: Math.E };
+        const supported = ['sqrt', 'sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'ln', 'log', 'log10', 'abs', 'exp'];
+        if (!supported.includes(identifier.value)) throw new Error(`“${identifier.value}” 함수는 지원하지 않아요. sqrt, sin, cos, tan, ln, log, abs, exp를 사용할 수 있어요.`);
+        if (!take('(')) throw new Error(`${identifier.value} 함수 뒤에 괄호를 넣어 주세요. 예: ${identifier.value}(2)`);
+        const argument = expression();
+        if (!take(')')) throw new Error('함수의 괄호가 닫히지 않았어요.');
+        return { type: 'function', name: identifier.value, value: argument };
+      }
       if (take('(')) {
         const node = expression();
         if (!take(')')) throw new Error('괄호가 닫히지 않았어요. 짝이 맞는지 확인해 주세요.');
@@ -109,6 +131,30 @@ document.addEventListener('DOMContentLoaded', () => {
     if (node.type === 'number') return node.value;
     if (node.type === 'variable') throw new Error('계산식에는 x를 사용할 수 없어요. 방정식 형태로 입력해 주세요.');
     if (node.type === 'unary') return node.op === '-' ? -evaluate(node.value) : evaluate(node.value);
+    if (node.type === 'function') {
+      const value = evaluate(node.value);
+      if (node.name === 'sqrt') {
+        if (value < 0) throw new Error('실수 범위에서 음수의 제곱근은 계산할 수 없어요.');
+        return Math.sqrt(value);
+      }
+      if (node.name === 'sin') return Math.sin(value);
+      if (node.name === 'cos') return Math.cos(value);
+      if (node.name === 'tan') {
+        if (Math.abs(Math.cos(value)) < 1e-12) throw new Error('이 각도에서는 tan 값이 정의되지 않아요.');
+        return Math.tan(value);
+      }
+      if (node.name === 'asin' || node.name === 'acos') {
+        if (Math.abs(value) > 1) throw new Error(`${node.name}의 입력값은 -1과 1 사이여야 해요.`);
+        return node.name === 'asin' ? Math.asin(value) : Math.acos(value);
+      }
+      if (node.name === 'atan') return Math.atan(value);
+      if (node.name === 'ln' || node.name === 'log' || node.name === 'log10') {
+        if (value <= 0) throw new Error('로그 함수의 입력값은 0보다 커야 해요.');
+        return node.name === 'ln' ? Math.log(value) : Math.log10(value);
+      }
+      if (node.name === 'abs') return Math.abs(value);
+      if (node.name === 'exp') return Math.exp(value);
+    }
     const left = evaluate(node.left);
     const right = evaluate(node.right);
     if (node.op === '+') return left + right;
@@ -123,11 +169,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function multiplyPolynomials(left, right) {
-    const result = [0, 0, 0];
-    for (let i = 0; i <= 2; i += 1) {
-      for (let j = 0; j <= 2; j += 1) {
+    const result = [0, 0, 0, 0, 0];
+    for (let i = 0; i <= 4; i += 1) {
+      for (let j = 0; j <= 4; j += 1) {
         if (Math.abs(left[i] * right[j]) < 1e-12) continue;
-        if (i + j > 2) throw new Error('현재는 이차 이하의 다항방정식까지 풀 수 있어요.');
+        if (i + j > 4) throw new Error('현재는 사차 이하의 다항방정식까지 풀 수 있어요.');
         result[i + j] += left[i] * right[j];
       }
     }
@@ -135,23 +181,24 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function polynomial(node) {
-    if (node.type === 'number') return [node.value, 0, 0];
-    if (node.type === 'variable') return [0, 1, 0];
+    if (node.type === 'number') return [node.value, 0, 0, 0, 0];
+    if (node.type === 'variable') return [0, 1, 0, 0, 0];
+    if (node.type === 'function') throw new Error('방정식에서는 x가 함수 안에 들어간 형태를 아직 풀 수 없어요. 함수 계산식은 x 없이 입력해 주세요.');
     if (node.type === 'unary') return polynomial(node.value).map((coefficient) => node.op === '-' ? -coefficient : coefficient);
     const left = polynomial(node.left);
     const right = polynomial(node.right);
     if (node.op === '+' || node.op === '-') return left.map((value, i) => value + (node.op === '+' ? right[i] : -right[i]));
     if (node.op === '*') return multiplyPolynomials(left, right);
     if (node.op === '/') {
-      if (Math.abs(right[1]) > 1e-10 || Math.abs(right[2]) > 1e-10) throw new Error('문자를 포함한 식으로 나누는 방정식은 아직 풀 수 없어요.');
+      if (right.slice(1).some((coefficient) => Math.abs(coefficient) > 1e-10)) throw new Error('문자를 포함한 식으로 나누는 방정식은 아직 풀 수 없어요.');
       if (Math.abs(right[0]) < 1e-10) throw new Error('0으로 나눌 수 없어요.');
       return left.map((coefficient) => coefficient / right[0]);
     }
     if (node.op === '^') {
-      if (Math.abs(right[1]) > 1e-10 || Math.abs(right[2]) > 1e-10 || !Number.isInteger(right[0]) || right[0] < 0 || right[0] > 2) {
-        throw new Error('방정식에서는 x의 지수를 0, 1, 2 중 하나로 입력해 주세요.');
+      if (right.slice(1).some((coefficient) => Math.abs(coefficient) > 1e-10) || !Number.isInteger(right[0]) || right[0] < 0 || right[0] > 4) {
+        throw new Error('방정식에서는 x의 지수를 0부터 4까지의 정수로 입력해 주세요.');
       }
-      let result = [1, 0, 0];
+      let result = [1, 0, 0, 0, 0];
       for (let i = 0; i < right[0]; i += 1) result = multiplyPolynomials(result, left);
       return result;
     }
@@ -159,16 +206,17 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function formatPolynomial(coefficients) {
-    const [constant, linear, quadratic] = coefficients;
     const terms = [];
-    [[quadratic, 'x²'], [linear, 'x'], [constant, '']].forEach(([coefficient, variable]) => {
-      if (Math.abs(coefficient) < 1e-10) return;
+    for (let power = coefficients.length - 1; power >= 0; power -= 1) {
+      const coefficient = coefficients[power];
+      if (Math.abs(coefficient) < 1e-10) continue;
+      const variable = power === 0 ? '' : power === 1 ? 'x' : `x${{ 2: '²', 3: '³', 4: '⁴' }[power] || `^${power}`}`;
       const abs = Math.abs(coefficient);
       const magnitude = variable && Math.abs(abs - 1) < 1e-10 ? '' : cleanNumber(abs);
       const term = `${magnitude}${variable}`;
       if (!terms.length) terms.push(coefficient < 0 ? `−${term}` : term);
       else terms.push(`${coefficient < 0 ? '−' : '+'} ${term}`);
-    });
+    }
     return terms.join(' ') || '0';
   }
 
@@ -176,6 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (node.type === 'number') return cleanNumber(node.value);
     if (node.type === 'variable') return 'x';
     if (node.type === 'unary') return `${node.op === '-' ? '−' : ''}${expressionLabel(node.value, 3)}`;
+    if (node.type === 'function') return `${node.name}(${expressionLabel(node.value)})`;
     const precedence = node.op === '+' || node.op === '-' ? 1 : node.op === '*' || node.op === '/' ? 2 : 3;
     const symbol = { '*': '×', '/': '÷' }[node.op] || node.op;
     let label = `${expressionLabel(node.left, precedence)} ${symbol} ${expressionLabel(node.right, precedence + (node.op === '-' || node.op === '/' ? 1 : 0))}`;
@@ -187,6 +236,12 @@ document.addEventListener('DOMContentLoaded', () => {
   function collectCalculationSteps(node, steps) {
     if (node.type === 'number') return cleanNumber(node.value);
     if (node.type === 'variable') return 'x';
+    if (node.type === 'function') {
+      const argument = collectCalculationSteps(node.value, steps);
+      const result = evaluate(node);
+      steps.push(`${node.name}(${argument}) = ${cleanNumber(result)}`);
+      return cleanNumber(result);
+    }
     if (node.type === 'unary') {
       const value = collectCalculationSteps(node.value, steps);
       const result = evaluate(node);
@@ -214,12 +269,70 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
+  function polynomialValue(coefficients, x) {
+    let result = 0;
+    for (let i = coefficients.length - 1; i >= 0; i -= 1) result = result * x + coefficients[i];
+    return result;
+  }
+
+  function findRealRoots(inputCoefficients) {
+    function isolate(coefficients) {
+      while (coefficients.length > 1 && Math.abs(coefficients[coefficients.length - 1]) < 1e-12) coefficients.pop();
+      const degree = coefficients.length - 1;
+      if (degree <= 0) return [];
+      if (degree === 1) return [-coefficients[0] / coefficients[1]];
+
+      const leading = coefficients[degree];
+      const bound = 1 + Math.max(...coefficients.slice(0, degree).map((value) => Math.abs(value / leading)));
+      const derivative = coefficients.slice(1).map((value, index) => value * (index + 1));
+      const critical = isolate(derivative).filter((value) => value > -bound && value < bound).sort((a, b) => a - b);
+      const points = [-bound, ...critical, bound];
+      const scaleAt = (x) => coefficients.reduce((sum, value, power) => sum + Math.abs(value) * Math.max(1, Math.abs(x) ** power), 0);
+      const nearZero = (value, x) => Math.abs(value) <= 1e-9 * Math.max(1, scaleAt(x));
+      const roots = [];
+
+      critical.forEach((point) => {
+        if (nearZero(polynomialValue(coefficients, point), point)) roots.push(point);
+      });
+
+      for (let i = 0; i < points.length - 1; i += 1) {
+        let low = points[i];
+        let high = points[i + 1];
+        let lowValue = polynomialValue(coefficients, low);
+        let highValue = polynomialValue(coefficients, high);
+        if (nearZero(lowValue, low) || nearZero(highValue, high) || (lowValue < 0) === (highValue < 0)) continue;
+        for (let iteration = 0; iteration < 120; iteration += 1) {
+          const middle = (low + high) / 2;
+          const middleValue = polynomialValue(coefficients, middle);
+          if (nearZero(middleValue, middle) || high - low < 1e-12 * Math.max(1, Math.abs(middle))) {
+            low = middle;
+            high = middle;
+            break;
+          }
+          if ((lowValue < 0) === (middleValue < 0)) {
+            low = middle;
+            lowValue = middleValue;
+          } else {
+            high = middle;
+            highValue = middleValue;
+          }
+        }
+        roots.push((low + high) / 2);
+      }
+      return roots.sort((a, b) => a - b).filter((root, index, list) => index === 0 || Math.abs(root - list[index - 1]) > 1e-7 * Math.max(1, Math.abs(root)));
+    }
+    return isolate([...inputCoefficients]);
+  }
+
   function solveEquation(source, leftTree, rightTree) {
     const left = polynomial(leftTree);
     const right = polynomial(rightTree);
     const coefficients = left.map((value, i) => value - right[i]);
-    const [c, b, a] = coefficients;
-    const degree = Math.abs(a) > 1e-10 ? 2 : Math.abs(b) > 1e-10 ? 1 : 0;
+    let degree = coefficients.length - 1;
+    while (degree > 0 && Math.abs(coefficients[degree]) < 1e-10) degree -= 1;
+    const c = coefficients[0];
+    const b = coefficients[1];
+    const a = coefficients[2];
     const steps = [];
     const standard = `${formatPolynomial(coefficients)} = 0`;
     steps.push({ title: 'x항과 상수항을 왼쪽으로 모아요.', math: standard });
@@ -237,6 +350,19 @@ document.addEventListener('DOMContentLoaded', () => {
       const answer = moved / b;
       steps.push({ title: '양변을 x의 계수로 나눠요.', math: `x = ${cleanNumber(moved)} ÷ ${cleanNumber(b)} = ${cleanNumber(answer)}` });
       return { answer: `x = ${cleanNumber(answer)}`, steps, problem: source.trim() };
+    }
+
+    if (degree > 2) {
+      const roots = findRealRoots(coefficients);
+      steps.push({ title: '다항식의 계수를 정리해요.', math: `최고차항은 ${degree}차예요. ${formatPolynomial(coefficients)} = 0` });
+      steps.push({ title: '수치적으로 실근을 찾아요.', math: '근의 공식 대신, 근이 있는 구간을 좁혀 근삿값을 계산해요.' });
+      if (!roots.length) {
+        steps.push({ title: '실수 범위에서 근이 없어요.', math: '실수 해를 찾지 못했어요. 복소수 근은 이 단계에서 표시하지 않아요.' });
+        return { answer: '실수 해 없음', steps, problem: source.trim() };
+      }
+      const formattedRoots = roots.map(cleanNumber);
+      steps.push({ title: '찾은 근을 원래 식에 대입해 확인해요.', math: formattedRoots.map((root) => `x ≈ ${root} (식의 값 ≈ ${cleanNumber(polynomialValue(coefficients, Number(root)))})`).join('  ·  ') });
+      return { answer: `x ≈ ${formattedRoots.join(', ')}`, steps, problem: source.trim() };
     }
 
     const discriminant = b * b - 4 * a * c;

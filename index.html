@@ -42,20 +42,20 @@
             <label class="sr-only" for="problem-input">수학 문제</label>
             <div class="input-wrap">
               <span class="input-symbol" aria-hidden="true">ƒx</span>
-              <input id="problem-input" name="problem" type="text" autocomplete="off" spellcheck="false" placeholder="예: 2x + 5 = 17" aria-describedby="input-help">
+              <input id="problem-input" name="problem" type="text" autocomplete="off" spellcheck="false" placeholder="예: x^3 - 6x^2 + 11x - 6 = 0" aria-describedby="input-help">
               <button class="clear-input" id="clear-btn" type="button" aria-label="입력 지우기" title="지우기">×</button>
             </div>
             <div class="input-footer">
-              <span id="input-help">계산식 또는 x가 포함된 일차·이차방정식을 입력해 보세요.</span>
+              <span id="input-help">계산식, 사차 이하 다항방정식, sqrt·삼각함수·로그를 입력해 보세요.</span>
               <button class="solve-button" type="submit"><span>풀이 보기</span><span aria-hidden="true">↗</span></button>
             </div>
           </form>
 
           <div class="examples">
             <span class="examples-label">예시로 시작</span>
-            <button class="example-chip" type="button" data-problem="2x + 5 = 17"><span class="chip-icon">x</span> 일차방정식</button>
-            <button class="example-chip" type="button" data-problem="x^2 - 5x + 6 = 0"><span class="chip-icon">x²</span> 이차방정식</button>
-            <button class="example-chip" type="button" data-problem="3 × (4 + 2)"><span class="chip-icon">÷</span> 계산식</button>
+            <button class="example-chip" type="button" data-problem="x^3 - 6x^2 + 11x - 6 = 0"><span class="chip-icon">x³</span> 삼차방정식</button>
+            <button class="example-chip" type="button" data-problem="x^4 - 5x^2 + 4 = 0"><span class="chip-icon">x⁴</span> 사차방정식</button>
+            <button class="example-chip" type="button" data-problem="sin(π / 4)^2 + cos(π / 4)^2"><span class="chip-icon">sin</span> 삼각함수</button>
           </div>
           <div class="error-message" id="error-message" role="alert" hidden></div>
         </div>
@@ -69,7 +69,7 @@
             </div>
             <h2>풀이가 여기에 보여요</h2>
             <p>위에 문제를 입력하거나 예시를 골라보세요.<br>답을 찾는 과정도 함께 알려드릴게요.</p>
-            <div class="empty-tags"><span>계산식</span><span>일차방정식</span><span>이차방정식</span></div>
+            <div class="empty-tags"><span>사차 이하 방정식</span><span>제곱근</span><span>삼각함수·로그</span></div>
           </div>
           <div class="result-content" id="result-content" hidden>
             <div class="result-topline">
